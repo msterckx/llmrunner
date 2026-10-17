@@ -10,7 +10,7 @@
 #   docker buildx build --platform linux/amd64 -t <dockerhub-user>/deep-researcher-vllm:qwen3-32b-awq --push .
 # Gated models: add `--secret id=HF_TOKEN,env=HF_TOKEN` (the token is not stored in the image).
 
-# Pin the worker version; see https://github.com/runpod-workers/worker-vllm/releases
+# Pin the worker version; see https://github.com/runpod-workers/worker-vllm/releases v1
 ARG WORKER_VERSION=v2.29.0
 FROM runpod/worker-v1-vllm:${WORKER_VERSION}
 
