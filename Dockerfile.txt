@@ -1,0 +1,45 @@
+# syntax=docker/dockerfile:1
+# RunPod Serverless image for deep-researcher: RunPod's vLLM worker with the model baked in.
+#
+# Baking the weights into the image means a cold start loads the model from local disk
+# instead of downloading ~20 GB from Hugging Face, and no network volume is needed.
+# The worker serves an OpenAI-compatible API at:
+#   https://api.runpod.ai/v2/<ENDPOINT_ID>/openai/v1
+#
+# Build for linux/amd64 (RunPod GPUs), e.g. from an Apple Silicon Mac:
+#   docker buildx build --platform linux/amd64 -t <dockerhub-user>/deep-researcher-vllm:qwen3-32b-awq --push .
+# Gated models: add `--secret id=HF_TOKEN,env=HF_TOKEN` (the token is not stored in the image).
+
+# Pin the worker version; see https://github.com/runpod-workers/worker-vllm/releases v1
+ARG WORKER_VERSION=v2.29.0
+FROM runpod/worker-v1-vllm:${WORKER_VERSION}
+
+# Model to bake in. MODEL_ID is also the name the API serves it under, so it must match the
+# model in config.yaml (`openai/<MODEL_ID>`).
+ARG MODEL_ID=Qwen/Qwen3-32B-AWQ
+ARG MODEL_REVISION=main
+ARG MODEL_DIR=/models/model
+
+RUN --mount=type=secret,id=HF_TOKEN,required=false \
+    if [ -s /run/secrets/HF_TOKEN ]; then export HF_TOKEN="$(cat /run/secrets/HF_TOKEN)"; fi \
+    && python3 -c "from huggingface_hub import snapshot_download; \
+snapshot_download(repo_id='${MODEL_ID}', revision='${MODEL_REVISION}', local_dir='${MODEL_DIR}', \
+ignore_patterns=['*.pth', 'original/*'])" \
+    && du -sh "${MODEL_DIR}"
+
+# Worker / vLLM settings. Any `vllm serve` flag can be set as an uppercase environment variable,
+# and every value here can be overridden per endpoint in the RunPod console.
+# - MAX_MODEL_LEN / GPU_MEMORY_UTILIZATION: fit Qwen3-32B-AWQ plus KV cache for many parallel
+#   requests on a 48 GB GPU.
+# - ENABLE_PREFIX_CACHING: every scorer/extractor call starts with the same long instructions.
+# - REASONING_PARSER: return Qwen3's thinking separately (stored as `reasoning` in llm_calls).
+# - HF_HUB_OFFLINE / TRANSFORMERS_OFFLINE: never contact Hugging Face at runtime.
+ENV MODEL_NAME=${MODEL_DIR} \
+    OPENAI_SERVED_MODEL_NAME_OVERRIDE=${MODEL_ID} \
+    MAX_MODEL_LEN=32768 \
+    GPU_MEMORY_UTILIZATION=0.92 \
+    ENABLE_PREFIX_CACHING=true \
+    REASONING_PARSER=qwen3 \
+    MAX_CONCURRENCY=32 \
+    HF_HUB_OFFLINE=1 \
+    TRANSFORMERS_OFFLINE=1
