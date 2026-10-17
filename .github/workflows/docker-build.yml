@@ -30,6 +30,10 @@ jobs:
           context: .
           file: Dockerfile.txt
           push: true
+          build-args: |
+            MODEL_ID=${{ secrets.MODEL_ID }}
+            WORKER_VERSION=${{ secrets.WORKER_VERSION }}
+          secrets: |
           tags: |
             msterckx/llmrunner-serverless:1.1
             msterckx/llmrunner-serverless:latest
