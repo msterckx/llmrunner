@@ -11,7 +11,7 @@
 # Gated models: add `--secret id=HF_TOKEN,env=HF_TOKEN` (the token is not stored in the image).
 
 # Pin the worker version; see https://github.com/runpod-workers/worker-vllm/releases v1
-ARG WORKER_VERSION=v2.29.0
+ARG WORKER_VERSION=v2.27.1
 FROM runpod/worker-v1-vllm:${WORKER_VERSION}
 
 # Model to bake in. MODEL_ID is also the name the API serves it under, so it must match the
