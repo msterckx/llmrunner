@@ -31,8 +31,8 @@ jobs:
           file: Dockerfile.txt
           push: true
           build-args: |
-            MODEL_ID=${{ env.MODEL_ID }}
-            WORKER_VERSION=${{ env.WORKER_VERSION }}
+            MODEL_ID=${{ vars.MODEL_ID }}
+            WORKER_VERSION=${{ vars.WORKER_VERSION }}
           secrets: |
           tags: |
             msterckx/llmrunner-serverless:1.1
